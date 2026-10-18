@@ -20,6 +20,7 @@
 #     usan medio local; PXE/NFS root no hace falta)
 # (openvpn y mkinitcpio-archiso se conservan; mkinitcpio-archiso es
 #  OBLIGATORIO para generar el initramfs live.)
+# AUR habilitado con: paru (repo [cachyos]) + base-devel (grupo -> makepkg).
 #
 alacritty
 alsa-utils
@@ -28,6 +29,7 @@ arch-install-scripts
 archlinux-keyring
 avahi
 base
+base-devel
 bash-completion
 bc
 bcachefs-tools
@@ -103,6 +105,7 @@ openvpn
 os-prober
 partclone
 parted
+paru
 pcsclite
 pipewire
 pipewire-alsa
