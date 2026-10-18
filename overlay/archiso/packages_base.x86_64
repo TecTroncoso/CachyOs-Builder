@@ -12,7 +12,14 @@
 #   - accesibilidad: brltty, espeak-ng, orca
 #   - otros: rxvt-unicode-terminfo, dmraid, b43-fwcutter, cloud-init,
 #     libwnck3, imwheel, usbmuxd, usb_modeswitch, pv, lynx, memtest86+(-efi)
-# (openvpn se conserva.)
+# Y segundo recorte orientado a "usuario comun" (119 paquetes):
+#   - WWAN: modemmanager, mobile-broadband-provider-info
+#   - diagnostico CLI: inxi, ethtool, lsof, hwinfo, hwdetect, dmidecode,
+#     lsscsi, traceroute
+#   - red: smbclient, nfs-utils, mkinitcpio-nfs-utils (el live/instalador
+#     usan medio local; PXE/NFS root no hace falta)
+# (openvpn y mkinitcpio-archiso se conservan; mkinitcpio-archiso es
+#  OBLIGATORIO para generar el initramfs live.)
 #
 alacritty
 alsa-utils
@@ -44,12 +51,10 @@ ckbcomp
 cryptsetup
 dhcpcd
 diffutils
-dmidecode
 dosfstools
 e2fsprogs
 edk2-shell
 efibootmgr
-ethtool
 exfatprogs
 f2fs-tools
 fakeroot
@@ -61,11 +66,8 @@ gpart
 gparted
 gptfdisk
 grub
-hwdetect
-hwinfo
 inetutils
 intel-ucode
-inxi
 iw
 iwd
 inotify-tools
@@ -76,23 +78,17 @@ libusb-compat
 linux-firmware
 linux-firmware-marvell
 lsb-release
-lsof
-lsscsi
 lvm2
 mdadm
 mesa
 micro
 mkinitcpio
 mkinitcpio-archiso
-mkinitcpio-nfs-utils
-mobile-broadband-provider-info
-modemmanager
 mtools
 nano
 nano-syntax-highlighting
 ndisc6
 networkmanager
-nfs-utils
 nilfs-utils
 noto-fonts
 noto-fonts-cjk
@@ -121,7 +117,6 @@ rtkit
 sdparm
 sg3_utils
 smartmontools
-smbclient
 sof-firmware
 squashfs-tools
 sudo
@@ -129,7 +124,6 @@ syslinux
 systemd-resolvconf
 testdisk
 tpm2-tss
-traceroute
 ttf-bitstream-vera
 ttf-dejavu
 ttf-liberation
