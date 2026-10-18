@@ -91,6 +91,7 @@ jobs:
 
       - name: Build ISO (${{ matrix.profile }})
         run: |
+          chmod +x ./scripts/build.sh ./scripts/util-iso.sh
           sudo -H -E -u builder ./scripts/build.sh "${{ matrix.profile }}"
 
       - name: Collect outputs
