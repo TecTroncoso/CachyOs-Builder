@@ -4,6 +4,15 @@
 #   - kernels (van en packages_kernel-*.x86_64)
 #   - paquetes especificos de KDE/Plasma (van en packages_desktop-kde.x86_64)
 #   - utilidades rescue/extra (van en packages_apps-complete.x86_64)
+# Y recortada para enfocar la ISO en escritorio (132 paquetes):
+#   - servidor/legacy de red: dnsmasq, bind, ldns, nmap, tcpdump, net-tools,
+#     linux-atm, wvdial, rp-pppoe, xl2tpd, vpnc, nbd, open-iscsi, haveged, ...
+#   - guests de VM: hyperv, open-vm-tools, qemu-guest-agent, spice-vdagent,
+#     virtualbox-guest-utils, vulkan-virtio
+#   - accesibilidad: brltty, espeak-ng, orca
+#   - otros: rxvt-unicode-terminfo, dmraid, b43-fwcutter, cloud-init,
+#     libwnck3, imwheel, usbmuxd, usb_modeswitch, pv, lynx, memtest86+(-efi)
+# (openvpn se conserva.)
 #
 alacritty
 alsa-utils
@@ -11,14 +20,11 @@ amd-ucode
 arch-install-scripts
 archlinux-keyring
 avahi
-b43-fwcutter
 base
 bash-completion
 bc
 bcachefs-tools
-bind
 bolt
-brltty
 btrfs-progs
 cachy-chroot
 cachyos-calamares-next
@@ -35,18 +41,14 @@ cachyos-v3-mirrorlist
 cachyos-v4-mirrorlist
 chwd
 ckbcomp
-cloud-init
 cryptsetup
 dhcpcd
 diffutils
 dmidecode
-dmraid
-dnsmasq
 dosfstools
 e2fsprogs
 edk2-shell
 efibootmgr
-espeak-ng
 ethtool
 exfatprogs
 f2fs-tools
@@ -59,11 +61,8 @@ gpart
 gparted
 gptfdisk
 grub
-haveged
 hwdetect
 hwinfo
-hyperv
-imwheel
 inetutils
 intel-ucode
 inxi
@@ -71,22 +70,16 @@ iw
 iwd
 inotify-tools
 jfsutils
-ldns
 less
 libfido2
 libusb-compat
-libwnck3
-linux-atm
 linux-firmware
 linux-firmware-marvell
 lsb-release
 lsof
 lsscsi
 lvm2
-lynx
 mdadm
-memtest86+
-memtest86+-efi
 mesa
 micro
 mkinitcpio
@@ -97,13 +90,10 @@ modemmanager
 mtools
 nano
 nano-syntax-highlighting
-nbd
 ndisc6
-net-tools
 networkmanager
 nfs-utils
 nilfs-utils
-nmap
 noto-fonts
 noto-fonts-cjk
 nss-mdns
@@ -111,12 +101,9 @@ ntfs-3g
 ntp
 nvidia-utils
 nvme-cli
-open-iscsi
-open-vm-tools
 opendesktop-fonts
 openssh
 openvpn
-orca
 os-prober
 partclone
 parted
@@ -127,25 +114,19 @@ pipewire-jack
 pipewire-pulse
 polkit
 power-profiles-daemon
-pv
-qemu-guest-agent
 realtime-privileges
 refind
-rp-pppoe
 rsync
 rtkit
-rxvt-unicode-terminfo
 sdparm
 sg3_utils
 smartmontools
 smbclient
 sof-firmware
-spice-vdagent
 squashfs-tools
 sudo
 syslinux
 systemd-resolvconf
-tcpdump
 testdisk
 tpm2-tss
 traceroute
@@ -154,21 +135,14 @@ ttf-dejavu
 ttf-liberation
 ttf-opensans
 udftools
-usb_modeswitch
-usbmuxd
 usbutils
 vim
-virtualbox-guest-utils
-vpnc
-vulkan-virtio
 wget
 wireless-regdb
 wireless_tools
 wireplumber
 wpa_supplicant
-wvdial
 xdg-user-dirs-gtk
 xdg-utils
 xfsprogs
-xl2tpd
 zfs-utils
