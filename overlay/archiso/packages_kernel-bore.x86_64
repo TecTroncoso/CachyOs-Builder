@@ -1,0 +1,6 @@
+#
+# Kernel CachyOS BORE (linux-cachyos) + variantes nvidia-open y zfs.
+#
+linux-cachyos
+linux-cachyos-nvidia-open
+linux-cachyos-zfs

@@ -1,0 +1,3 @@
+CachyOSMod
+# Identificador de la edicion. La version real (fecha) se escribe en
+# /etc/version-tag durante el build. Este archivo solo marca la identidad.

@@ -1,0 +1,18 @@
+#
+# Apps "complete": utilidades rescue/extra de CachyOS (fuera del set minimal).
+# Anade cualquier paquete extra propio aqui.
+#
+clonezilla
+darkhttpd
+ddrescue
+occt
+partimage
+lftp
+irssi
+mc
+# --- Agrega aqui tus aplicaciones extra (ejemplos comentados) ---
+# obs-studio
+# vlc
+# gimp
+# libreoffice-fresh
+# steam

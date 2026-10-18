@@ -1,0 +1,111 @@
+name: Build CachyOSMod ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      desktop:
+        description: "Escritorio"
+        type: choice
+        options: [kde, gnome, xfce]
+        default: kde
+      kernel:
+        description: "Kernel"
+        type: choice
+        options: [bore, lts]
+        default: bore
+      apps:
+        description: "Aplicaciones"
+        type: choice
+        options: [complete, minimal]
+        default: complete
+      build_all:
+        description: "Construir TODOS los perfiles (matriz 3x2x2)"
+        type: boolean
+        default: false
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Planificar perfiles
+    runs-on: ubuntu-latest
+    outputs:
+      profiles: ${{ steps.set.outputs.profiles }}
+      builddate: ${{ steps.date.outputs.builddate }}
+    steps:
+      - name: Build date
+        id: date
+        run: echo "builddate=$(date +'%y%m%d')" >> "$GITHUB_OUTPUT"
+
+      - name: Compute profile matrix
+        id: set
+        env:
+          BUILD_ALL: ${{ github.event.inputs.build_all == 'true' }}
+          DESKTOP: ${{ github.event.inputs.desktop || 'kde' }}
+          KERNEL: ${{ github.event.inputs.kernel || 'bore' }}
+          APPS: ${{ github.event.inputs.apps || 'complete' }}
+        run: |
+          if [ "$BUILD_ALL" = "true" ]; then
+            profiles='["kde-bore-complete","kde-bore-minimal","kde-lts-complete","kde-lts-minimal","gnome-bore-complete","gnome-bore-minimal","gnome-lts-complete","gnome-lts-minimal","xfce-bore-complete","xfce-bore-minimal","xfce-lts-complete","xfce-lts-minimal"]'
+          else
+            profiles="[\"${DESKTOP}-${KERNEL}-${APPS}\"]"
+          fi
+          echo "Perfiles a construir: $profiles"
+          echo "profiles=$profiles" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: build-${{ matrix.profile }}
+    runs-on: ubuntu-latest
+    needs: plan
+    container:
+      image: archlinux:base-devel
+      options: --privileged
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJSON(needs.plan.outputs.profiles) }}
+    steps:
+      - name: Checkout CachyOSMod
+        uses: actions/checkout@v4
+
+      - name: Add CachyOS keyring & repo
+        run: |
+          pacman-key --init
+          pacman-key --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+          pacman-key --lsign-key F3B607488DB35A47
+          sed -i '/^\[core\]$/i[cachyos]\nServer = https://mirror.cachyos.org/repo/$arch/$repo\n' /etc/pacman.conf
+
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm git rsync archiso cachyos-keyring mkinitcpio-archiso squashfs-tools grub
+
+      - name: Create build user
+        run: |
+          useradd builder -m
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chmod -R a+rw .
+
+      - name: Build ISO (${{ matrix.profile }})
+        run: |
+          sudo -H -E -u builder ./scripts/build.sh "${{ matrix.profile }}"
+
+      - name: Collect outputs
+        id: out
+        run: |
+          OUT_DIR=".work/base/out/${{ matrix.profile }}"
+          mkdir -p "artifacts/${{ matrix.profile }}"
+          if [ -d "$OUT_DIR" ]; then
+            cp "$OUT_DIR"/* "artifacts/${{ matrix.profile }}/" 2>/dev/null || true
+          fi
+          ls -lah "artifacts/${{ matrix.profile }}" || true
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cachyosmod-${{ matrix.profile }}-${{ needs.plan.outputs.builddate }}
+          path: artifacts/${{ matrix.profile }}
+          if-no-files-found: warn

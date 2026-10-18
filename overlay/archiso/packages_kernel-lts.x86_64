@@ -1,0 +1,6 @@
+#
+# Kernel CachyOS LTS (linux-cachyos-lts) + variantes nvidia-open y zfs.
+#
+linux-cachyos-lts
+linux-cachyos-lts-nvidia-open
+linux-cachyos-lts-zfs

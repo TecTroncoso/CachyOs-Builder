@@ -1,0 +1,25 @@
+#
+# Escritorio KDE Plasma (por defecto en CachyOS).
+# El display-manager enlazado es plasmalogin.service (plasma-login-manager).
+#
+bluedevil
+breeze-gtk
+dolphin
+kate
+kcalc
+kde-gtk-config
+kinfocenter
+konsole
+kscreen
+kxkb2locale1
+partitionmanager
+plasma-desktop
+plasma-integration
+plasma-nm
+plasma-pa
+plasma-thunderbolt
+plasma-workspace
+plasma-login-manager
+polkit-kde-agent
+spectacle
+cachyos-kde-settings

@@ -1,0 +1,16 @@
+#
+# Escritorio GNOME. Display-manager: gdm.service
+#
+gdm
+gnome-shell
+gnome-session
+gnome-control-center
+gnome-terminal
+gnome-software
+gnome-tweaks
+gnome-keyring
+gnome-bluetooth
+gnome-disk-utility
+nautilus
+xdg-desktop-portal-gnome
+gnome-boxes

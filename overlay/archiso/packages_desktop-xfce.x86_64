@@ -1,0 +1,15 @@
+#
+# Escritorio Xfce. Display-manager: lightdm.service (greeter gtk)
+#
+lightdm
+lightdm-gtk-greeter
+xfce4
+xfce4-goodies
+xfce4-terminal
+thunar
+thunar-volman
+gvfs
+mousepad
+ristretto
+mate-polkit
+xfce4-power-manager

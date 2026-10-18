@@ -1,0 +1,32 @@
+# CachyOSMod
+# Artefactos de build y la base clonada de CachyOS no van en el repo.
+.work/
+*.iso
+*.img
+*.cer
+*.crt
+*.key
+*.pem
+artifacts/
+
+# Generados durante el build (tambien los ignora la base CachyOS)
+overlay/archiso/packages.x86_64
+overlay/archiso/airootfs/etc/motd
+overlay/archiso/airootfs/etc/environment
+overlay/archiso/airootfs/etc/pacman.d/cachyos-mirrorlist
+overlay/archiso/airootfs/etc/edition-tag
+overlay/archiso/airootfs/etc/version-tag
+overlay/archiso/airootfs/etc/systemd/system/display-manager.service
+overlay/archiso/airootfs/etc/systemd/system/cachyos-rate-mirrors.timer
+
+# Sistema / editores
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+*~
+
+# Entorno local (no forma parte del build de la ISO)
+venv/
+.vscode/
+abrir_proyecto.bat
