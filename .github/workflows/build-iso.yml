@@ -18,6 +18,11 @@ on:
         type: choice
         options: [complete, minimal]
         default: complete
+      arch:
+        description: "Optimizacion CPU (v3/v4 requiere CPU moderna)"
+        type: choice
+        options: [generic, v3, v4]
+        default: generic
       build_all:
         description: "Construir TODOS los perfiles (matriz 3x3x2)"
         type: boolean
@@ -81,7 +86,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pacman -Syu --noconfirm git rsync archiso cachyos-keyring mkinitcpio-archiso squashfs-tools grub
+          pacman -Syu --noconfirm git rsync archiso cachyos-keyring cachyos-v3-mirrorlist cachyos-v4-mirrorlist mkinitcpio-archiso squashfs-tools grub
 
       - name: Create build user
         run: |
@@ -90,9 +95,11 @@ jobs:
           chmod -R a+rw .
 
       - name: Build ISO (${{ matrix.profile }})
+        env:
+          ARCH_TUNE: ${{ github.event.inputs.arch || 'generic' }}
         run: |
           chmod +x ./scripts/build.sh ./scripts/util-iso.sh
-          sudo -H -E -u builder ./scripts/build.sh "${{ matrix.profile }}"
+          sudo -H -E -u builder env ARCH_TUNE="$ARCH_TUNE" ./scripts/build.sh "${{ matrix.profile }}"
 
       - name: Collect outputs
         id: out

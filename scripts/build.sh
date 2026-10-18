@@ -15,12 +15,15 @@
 # Variables opcionales:
 #   BASE_REPO  (default: https://github.com/CachyOS/CachyOS-Live-ISO.git)
 #   BASE_REF   (default: commit fijado abajo)
+#   ARCH_TUNE  (default: generic; usa v3 o v4 para habilitar los repos
+#               optimizados de CachyOS — requiere CPU con AVX2/AVX-512)
 #
 set -euo pipefail
 
 BASE_REPO="${BASE_REPO:-https://github.com/CachyOS/CachyOS-Live-ISO.git}"
 BASE_REF="${BASE_REF:-3215497d2e8c5fea90e185affcf973dfa2cf790b}"
 PROFILE="${1:-kde-default-complete}"
+ARCH_TUNE="${ARCH_TUNE:-generic}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
@@ -31,12 +34,20 @@ echo "==> CachyOSMod build"
 echo "    Base repo : ${BASE_REPO}"
 echo "    Base ref  : ${BASE_REF}"
 echo "    Perfil    : ${PROFILE}"
+echo "    Arch tune : ${ARCH_TUNE}"
 
 # Validar formato de perfil (escritorio-kernel-apps)
 if [[ ! "${PROFILE}" =~ ^(kde|gnome|xfce)-(default|bore|lts)-(complete|minimal)$ ]]; then
     echo "ERROR: perfil invalido '${PROFILE}'. Formato: <kde|gnome|xfce>-<default|bore|lts>-<complete|minimal>" >&2
     exit 1
 fi
+
+# Validar optimizacion de CPU (generic | v3 | v4)
+if [[ ! "${ARCH_TUNE}" =~ ^(generic|v3|v4)$ ]]; then
+    echo "ERROR: ARCH_TUNE invalido '${ARCH_TUNE}'. Use: generic|v3|v4" >&2
+    exit 1
+fi
+export ARCH_TUNE
 
 # 1) Clonar / actualizar la base CachyOS
 if [[ ! -d "${BASE}/.git" ]]; then

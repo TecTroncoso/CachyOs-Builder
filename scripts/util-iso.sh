@@ -146,6 +146,44 @@ set_display_manager() {
     msg2 "Display-manager -> %s" "${_dm}"
 }
 
+# Habilita los repos optimizados de CachyOS (x86-64-v3 / v4) en pacman.conf.
+# ARCH_TUNE=generic -> no hace nada; v3/v4 -> inyecta las secciones ANTES de
+# [cachyos] para que pacman priorice las compilaciones optimizadas.
+# Requiere cachyos-v3-mirrorlist/cachyos-v4-mirrorlist en el host de build
+# (el Include se resuelve en el host durante pacstrap).
+apply_arch_tune() {
+    local _tune="${ARCH_TUNE:-generic}"
+    local _conf="${src_dir}/archiso/pacman.conf"
+
+    if [[ "${_tune}" == "generic" ]]; then
+        msg2 "Arch tune: generic (sin repos v3/v4)"
+        return 0
+    fi
+
+    local _mirror="/etc/pacman.d/cachyos-${_tune}-mirrorlist"
+    local _block="${_conf}.tune"
+    {
+        printf '[cachyos-%s]\n' "${_tune}"
+        printf 'Include = %s\n' "${_mirror}"
+        printf '[cachyos-core-%s]\n' "${_tune}"
+        printf 'Include = %s\n' "${_mirror}"
+        printf '[cachyos-extra-%s]\n' "${_tune}"
+        printf 'Include = %s\n' "${_mirror}"
+    } > "${_block}"
+
+    # Inserta el bloque justo antes de la seccion [cachyos]
+    awk 'NR==FNR{b=b $0 ORS; next} /^\[cachyos\]$/ && !done{printf "%s", b; done=1} {print}' \
+        "${_block}" "${_conf}" > "${_conf}.tmp"
+    mv "${_conf}.tmp" "${_conf}"
+    rm -f "${_block}"
+
+    if grep -q "^\[cachyos-${_tune}\]$" "${_conf}"; then
+        msg2 "Arch tune: ${_tune} -> repos cachyos-${_tune}, cachyos-core-${_tune}, cachyos-extra-${_tune}"
+    else
+        warning "No se pudo inyectar [cachyos-${_tune}] en pacman.conf"
+    fi
+}
+
 modify_mkarchiso() {
     local _is_hack_applied="$(grep -q 'archlinux-keyring-wkd-sync.timer' /usr/bin/mkarchiso; echo $?)"
     if [ $_is_hack_applied -ne 0 ]; then
@@ -185,6 +223,9 @@ prepare_profile(){
 
     # Display-manager del escritorio elegido
     set_display_manager "${_desktop}"
+
+    # Habilitar repos optimizados v3/v4 si se pidio
+    apply_arch_tune
 
     generate_environment "${profile}"
     generate_version_tag "${profile}" "${_iso_version}"
