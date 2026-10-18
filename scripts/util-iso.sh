@@ -281,13 +281,22 @@ apply_arch_tune() {
     msg2 "Arch tune: %s -> niveles %s (repos cachyos, cachyos-core y cachyos-extra de cada nivel)" "${_tune}" "${_levels[*]}"
 }
 
+# Desactiva el timer archlinux-keyring-wkd-sync dentro del airootfs.
+#
+# FIX (v3/v4 build 2026-10-18): el parche original de CachyOS inyectaba
+# tras "_run_once _make_customize_airootfs" un rm usando la variable
+# pacman_dir, que NO existe en mkarchiso (la real es pacstrap_dir).
+# mkarchiso corre con "set -e -u", asi que el build moria con
+# "pacman_dir: unbound variable" justo despues de instalar los paquetes.
+# Con archiso 91 (el que instala CI) mkarchiso ya no referencia ese
+# timer y el archlinux-keyring moderno tampoco activa el timer dentro
+# del airootfs, asi que el parche es innecesario: esta funcion pasa a
+# ser informativa (no-op) y nunca rompe el build.
 modify_mkarchiso() {
-    local _is_hack_applied="$(grep -q 'archlinux-keyring-wkd-sync.timer' /usr/bin/mkarchiso; echo $?)"
-    if [ $_is_hack_applied -ne 0 ]; then
-        msg "Patching mkarchiso with disabled arch keyrings timer..."
-        sudo sed 's/_run_once _make_customize_airootfs/_run_once _make_customize_airootfs\n\trm -f \"${pacman_dir}\/usr\/lib\/systemd\/system\/timers.target.wants\/archlinux-keyring-wkd-sync.timer\"\n/' -i /usr/bin/mkarchiso
+    if grep -q 'archlinux-keyring-wkd-sync.timer' /usr/bin/mkarchiso; then
+        msg "mkarchiso ya gestiona el timer archlinux-keyring-wkd-sync; no se parchea"
     else
-        msg "mkarchiso is already patched!"
+        msg "mkarchiso 91+: el timer del keyring ya no aplica; no se parchea"
     fi
 }
 
