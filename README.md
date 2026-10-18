@@ -156,6 +156,9 @@ Workflow: `.github/workflows/build-iso.yml`.
   (todos con el mismo `arch` elegido).
 - **Push a `main`/`master`**: construye el perfil por defecto
   `kde-default-complete` (arch `generic`).
+- **`arch=v4|v3v4` en CI**: el runner necesita **AVX-512** (el build ejecuta
+  los binarios v4 en chroot durante la instalacion); el workflow lo verifica
+  al empezar y falla con un mensaje claro si la CPU no lo soporta.
 
 Cada perfil genera un artifact `cachyosmod-<perfil>[-<arch>]-<fecha>` con la ISO y
 su `.sha256` (el sufijo `-<arch>` solo aparece si `arch` no es `generic`;

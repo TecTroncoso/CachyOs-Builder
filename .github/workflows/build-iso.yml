@@ -94,14 +94,24 @@ jobs:
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
           chmod -R a+rw .
 
+      - name: Check CPU supports requested optimization
+        env:
+          ARCH_TUNE: ${{ github.event.inputs.arch || 'generic' }}
+        run: |
+          if [ "$ARCH_TUNE" = "v3" ] || [ "$ARCH_TUNE" = "v3v4" ]; then
+            grep -qw avx2 /proc/cpuinfo || { echo "::error::ARCH_TUNE=$ARCH_TUNE necesita una CPU con AVX2 y este runner no la tiene."; exit 1; }
+          fi
+          if [ "$ARCH_TUNE" = "v4" ] || [ "$ARCH_TUNE" = "v3v4" ]; then
+            grep -qw avx512f /proc/cpuinfo || { echo "::error::ARCH_TUNE=$ARCH_TUNE necesita una CPU con AVX-512 y este runner no la tiene (los binarios v4 se ejecutan en chroot durante el build). Usa arch=generic|v3 o re-ejecuta el job (el hardware del runner puede variar)."; exit 1; }
+          fi
+
       - name: Build ISO (${{ matrix.profile }})
         env:
           ARCH_TUNE: ${{ github.event.inputs.arch || 'generic' }}
-          ARCH_SUFFIX: ${{ github.event.inputs.arch == 'generic' && '' || format('-{0}', github.event.inputs.arch) }}
         run: |
           chmod +x ./scripts/build.sh ./scripts/util-iso.sh
           sudo -H -E -u builder env ARCH_TUNE="$ARCH_TUNE" ./scripts/build.sh "${{ matrix.profile }}"
-          echo "ARCH_SUFFIX=$ARCH_SUFFIX" >> "$GITHUB_ENV"
+          echo "ARCH_SUFFIX=$(if [ "$ARCH_TUNE" != "generic" ]; then echo "-$ARCH_TUNE"; fi)" >> "$GITHUB_ENV"
 
       - name: Collect outputs
         id: out
