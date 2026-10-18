@@ -2,7 +2,8 @@
 
 ISOs personalizadas construidas sobre la **base 100% CachyOS**
 ([CachyOS/CachyOS-Live-ISO](https://github.com/CachyOS/CachyOS-Live-ISO)),
-con un sistema de **perfiles compuestos** (escritorio × kernel × aplicaciones)
+con un sistema de **perfiles compuestos** (escritorio × kernel × aplicaciones),
+**optimización CPU opcional** (repos oficiales v3/v4)
 y construcción automática en **GitHub Actions**.
 
 > Este repo **no** duplica los binarios de CachyOS. Clona la base oficial fijada
@@ -42,6 +43,11 @@ Formato: **`<escritorio>-<kernel>-<apps>`**
 | Escritorio | `kde`, `gnome`, `xfce` | KDE Plasma (default CachyOS), GNOME o Xfce |
 | Kernel | `default`, `bore`, `lts` | `linux-cachyos` (EEVDF, ISO oficial), `linux-cachyos-bore` (BORE real) o `linux-cachyos-lts` — todos con nvidia-open y zfs |
 | Apps | `complete`, `minimal` | `complete` = rescue/extra de CachyOS; `minimal` = solo base |
+| Optimización CPU | `generic`, `v3`, `v4`, `v3v4` | Repos oficiales optimizados: `generic` = x86-64 universal; `v3` = AVX2 (Haswell+/Zen+); `v4` = AVX-512 (Skylake-X/Zen 4+); `v3v4` = ambos en cascada v4 → v3 → genérico |
+
+> La optimización CPU **no** es parte del nombre del perfil: se elige con
+> `ARCH_TUNE` (local) o el input `arch` (Actions) y se refleja en el nombre
+> del archivo ISO/artifact (`cachyosmod-<perfil>-<arch>-<fecha>`).
 
 Ejemplos: `kde-default-complete`, `gnome-lts-minimal`, `xfce-bore-complete`.
 Perfiles disponibles: 3 escritorios × 3 kernels × 2 apps = **18**.
@@ -94,6 +100,9 @@ sudo pacman -Syu --needed cachyos-keyring
 # 2. Construir un perfil concreto
 ./scripts/build.sh kde-default-complete
 
+# Con optimizacion CPU (repos oficiales v3/v4)
+ARCH_TUNE=v3v4 ./scripts/build.sh xfce-bore-minimal
+
 # La ISO queda en:  .work/base/out/kde-default-complete/
 ```
 
@@ -118,8 +127,9 @@ Workflow: `.github/workflows/build-iso.yml`.
   o marca **`build_all`** para construir los 18 perfiles en matriz.
 - **Push a `main`/`master`**: construye el perfil por defecto `kde-default-complete`.
 
-Cada perfil genera un artifact `cachyosmod-<perfil>-<fecha>` con la ISO y su
-`.sha256`.
+Cada perfil genera un artifact `cachyosmod-<perfil>[-<arch>]-<fecha>` con la ISO y
+su `.sha256` (el sufijo `-<arch>` solo aparece si `arch` no es `generic`;
+ej. `cachyosmod-xfce-bore-minimal-v3v4-261018`).
 
 ### Cómo usarlo
 

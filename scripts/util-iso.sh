@@ -147,8 +147,10 @@ set_display_manager() {
 }
 
 # Habilita los repos optimizados de CachyOS (x86-64-v3 / v4) en pacman.conf.
-# ARCH_TUNE=generic -> no hace nada; v3/v4 -> inyecta las secciones ANTES de
-# [cachyos] para que pacman priorice las compilaciones optimizadas.
+# ARCH_TUNE=generic -> no hace nada;
+# v3 / v4 -> inyecta las 3 secciones de ese nivel ANTES de [cachyos];
+# v3v4 -> inyecta v4 primero y luego v3 (cascada v4 -> v3 -> generico).
+# pacman prioriza el primer repo que define cada paquete.
 # Requiere cachyos-v3-mirrorlist/cachyos-v4-mirrorlist en el host de build
 # (el Include se resuelve en el host durante pacstrap).
 apply_arch_tune() {
@@ -160,16 +162,27 @@ apply_arch_tune() {
         return 0
     fi
 
-    local _mirror="/etc/pacman.d/cachyos-${_tune}-mirrorlist"
-    local _block="${_conf}.tune"
-    {
-        printf '[cachyos-%s]\n' "${_tune}"
-        printf 'Include = %s\n' "${_mirror}"
-        printf '[cachyos-core-%s]\n' "${_tune}"
-        printf 'Include = %s\n' "${_mirror}"
-        printf '[cachyos-extra-%s]\n' "${_tune}"
-        printf 'Include = %s\n' "${_mirror}"
-    } > "${_block}"
+    # Niveles a inyectar, en orden de prioridad (el primero queda mas arriba).
+    local _levels=()
+    case "${_tune}" in
+        v3)   _levels=(v3) ;;
+        v4)   _levels=(v4) ;;
+        v3v4) _levels=(v4 v3) ;;
+        *)    die "Unknown arch tune: [%s] (use generic|v3|v4|v3v4)" "${_tune}" ;;
+    esac
+
+    local _lv _block="${_conf}.tune"
+    : > "${_block}"
+    for _lv in "${_levels[@]}"; do
+        {
+            printf '[cachyos-%s]\n' "${_lv}"
+            printf 'Include = %s\n' "/etc/pacman.d/cachyos-${_lv}-mirrorlist"
+            printf '[cachyos-core-%s]\n' "${_lv}"
+            printf 'Include = %s\n' "/etc/pacman.d/cachyos-${_lv}-mirrorlist"
+            printf '[cachyos-extra-%s]\n' "${_lv}"
+            printf 'Include = %s\n' "/etc/pacman.d/cachyos-${_lv}-mirrorlist"
+        } >> "${_block}"
+    done
 
     # Inserta el bloque justo antes de la seccion [cachyos]
     awk 'NR==FNR{b=b $0 ORS; next} /^\[cachyos\]$/ && !done{printf "%s", b; done=1} {print}' \
@@ -177,10 +190,10 @@ apply_arch_tune() {
     mv "${_conf}.tmp" "${_conf}"
     rm -f "${_block}"
 
-    if grep -q "^\[cachyos-${_tune}\]$" "${_conf}"; then
-        msg2 "Arch tune: ${_tune} -> repos cachyos-${_tune}, cachyos-core-${_tune}, cachyos-extra-${_tune}"
+    if grep -q "^\[cachyos-${_levels[0]}\]$" "${_conf}"; then
+        msg2 "Arch tune: ${_tune} -> niveles ${_levels[*]} (repos cachyos, cachyos-core y cachyos-extra de cada nivel)"
     else
-        warning "No se pudo inyectar [cachyos-${_tune}] en pacman.conf"
+        warning "No se pudo inyectar [cachyos-${_levels[0]}] en pacman.conf"
     fi
 }
 
@@ -224,7 +237,7 @@ prepare_profile(){
     # Display-manager del escritorio elegido
     set_display_manager "${_desktop}"
 
-    # Habilitar repos optimizados v3/v4 si se pidio
+    # Habilitar repos optimizados v3/v4/v3v4 si se pidio
     apply_arch_tune
 
     generate_environment "${profile}"
@@ -300,6 +313,7 @@ gen_iso_fn(){
     local vars=() name
     vars+=("cachyosmod")
     [[ -n ${profile} ]] && vars+=("${profile}")
+    [[ "${ARCH_TUNE:-generic}" != "generic" ]] && vars+=("${ARCH_TUNE}")
     vars+=("$(date +%y%m%d)")
 
     for n in ${vars[@]}; do

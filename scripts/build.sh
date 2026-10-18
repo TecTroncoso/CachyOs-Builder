@@ -15,8 +15,9 @@
 # Variables opcionales:
 #   BASE_REPO  (default: https://github.com/CachyOS/CachyOS-Live-ISO.git)
 #   BASE_REF   (default: commit fijado abajo)
-#   ARCH_TUNE  (default: generic; usa v3 o v4 para habilitar los repos
-#               optimizados de CachyOS — requiere CPU con AVX2/AVX-512)
+#   ARCH_TUNE  (default: generic; usa v3, v4 o v3v4 para habilitar los repos
+#               optimizados de CachyOS: v3=AVX2, v4=AVX-512,
+#               v3v4=ambos en cascada v4 -> v3 -> generico)
 #
 set -euo pipefail
 
@@ -42,9 +43,9 @@ if [[ ! "${PROFILE}" =~ ^(kde|gnome|xfce)-(default|bore|lts)-(complete|minimal)$
     exit 1
 fi
 
-# Validar optimizacion de CPU (generic | v3 | v4)
-if [[ ! "${ARCH_TUNE}" =~ ^(generic|v3|v4)$ ]]; then
-    echo "ERROR: ARCH_TUNE invalido '${ARCH_TUNE}'. Use: generic|v3|v4" >&2
+# Validar optimizacion de CPU (generic | v3 | v4 | v3v4)
+if [[ ! "${ARCH_TUNE}" =~ ^(generic|v3|v4|v3v4)$ ]]; then
+    echo "ERROR: ARCH_TUNE invalido '${ARCH_TUNE}'. Use: generic|v3|v4|v3v4" >&2
     exit 1
 fi
 export ARCH_TUNE
