@@ -162,12 +162,17 @@ set_display_manager() {
 # el runner resuelve a x86_64): "package architecture is not valid". pacman
 # admite varias arquitecturas separadas por espacios ('any' siempre pasa).
 #
-# Tambien fija $arch en las URLs del repo generico: este solo existe bajo
-# /repo/x86_64/ (los optimizados bajo /repo/x86_64_v{3,4}/), y asi la
-# expansion de $arch no depende de la lista de arquitecturas configurada.
+# Los bloques v3/v4 NO usan Include de cachyos-v{3,4}-mirrorlist: esos
+# archivos usan la variable $arch_v{3,4} (parche propio del pacman de
+# CachyOS) cuya expansion se corrompe con una lista multiple en
+# Architecture (inyecta la lista entera en la URL -> 404 en todos los
+# mirrors). En su lugar se escriben Server lines literales con la ruta
+# del nivel; $repo es variable nativa de pacman y no depende de
+# Architecture. Mirrors verificados: cdn77/us/at sirven /repo/x86_64_vN/.
 #
-# Requiere cachyos-v3-mirrorlist/cachyos-v4-mirrorlist en el host de build
-# (el Include se resuelve ahi durante pacstrap) y en la ISO (van en la base).
+# El repo generico vive bajo /repo/x86_64/ en los mirrors (verificado),
+# por lo que tambien se fijan las URLs del [cachyos] del conf de build
+# (la base apunta a mirror.cachyos.org, marcado inestable upstream).
 apply_arch_tune() {
     local _tune="${ARCH_TUNE:-generic}"
 
@@ -204,16 +209,24 @@ apply_arch_tune() {
         fi
 
         # 1) Bloques de repos del nivel, justo antes de la seccion [cachyos].
+        #    Servers literales (verificados) en vez del Include de
+        #    cachyos-v{3,4}-mirrorlist (que usa $arch_v{3,4}).
         _block="${_conf}.tune"
         : > "${_block}"
         for _lv in "${_levels[@]}"; do
             {
                 printf '[cachyos-%s]\n' "${_lv}"
-                printf 'Include = /etc/pacman.d/cachyos-%s-mirrorlist\n' "${_lv}"
+                printf 'Server = https://cdn77.cachyos.org/repo/x86_64_%s/$repo\n' "${_lv}"
+                printf 'Server = https://us.cachyos.org/repo/x86_64_%s/$repo\n' "${_lv}"
+                printf 'Server = https://at.cachyos.org/repo/x86_64_%s/$repo\n' "${_lv}"
                 printf '[cachyos-core-%s]\n' "${_lv}"
-                printf 'Include = /etc/pacman.d/cachyos-%s-mirrorlist\n' "${_lv}"
+                printf 'Server = https://cdn77.cachyos.org/repo/x86_64_%s/$repo\n' "${_lv}"
+                printf 'Server = https://us.cachyos.org/repo/x86_64_%s/$repo\n' "${_lv}"
+                printf 'Server = https://at.cachyos.org/repo/x86_64_%s/$repo\n' "${_lv}"
                 printf '[cachyos-extra-%s]\n' "${_lv}"
-                printf 'Include = /etc/pacman.d/cachyos-%s-mirrorlist\n' "${_lv}"
+                printf 'Server = https://cdn77.cachyos.org/repo/x86_64_%s/$repo\n' "${_lv}"
+                printf 'Server = https://us.cachyos.org/repo/x86_64_%s/$repo\n' "${_lv}"
+                printf 'Server = https://at.cachyos.org/repo/x86_64_%s/$repo\n' "${_lv}"
             } >> "${_block}"
         done
         awk 'NR==FNR{b=b $0 ORS; next} /^\[cachyos\]$/ && !done{printf "%s", b; done=1} {print}' \
@@ -230,7 +243,14 @@ apply_arch_tune() {
             sed -i "/^\[options\]/a Architecture = ${_archs}" "${_conf}"
         fi
 
-        # 3) Fijar $arch en las Server lines (el repo generico vive en /repo/x86_64/).
+        # 3) Repo generico [cachyos] del conf de build: la base apunta a
+        #    mirror.cachyos.org (inestable) con $arch; lo sustituimos por
+        #    cdn77 (CDN principal) + fallbacks, todos con ruta literal.
+        if [[ "${_conf}" == "${_conf_build}" ]]; then
+            sed -i 's|^Server = https://mirror\.cachyos\.org/repo/\$arch/\$repo$|Server = https://cdn77.cachyos.org/repo/x86_64/$repo\nServer = https://us.cachyos.org/repo/x86_64/$repo\nServer = https://mirror.cachyos.org/repo/x86_64/$repo|' "${_conf}"
+        fi
+        # Por si quedara alguna otra Server line con $arch: fijarla a x86_64
+        # (el repo generico vive bajo /repo/x86_64/ en los mirrors).
         sed -i '/^Server = /s|\$arch|x86_64|g' "${_conf}"
 
         # 4) Solo en el conf de BUILD: [core]/[extra]/[multilib] resuelven el
