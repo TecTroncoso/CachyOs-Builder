@@ -1,6 +1,7 @@
 #
-# Kernel CachyOS BORE (linux-cachyos) + variantes nvidia-open y zfs.
+# Kernel CachyOS BORE (linux-cachyos-bore) + variantes nvidia-open y zfs.
+# Es el scheduler BORE dedicado; ojo, el linux-cachyos por defecto usa EEVDF.
 #
-linux-cachyos
-linux-cachyos-nvidia-open
-linux-cachyos-zfs
+linux-cachyos-bore
+linux-cachyos-bore-nvidia-open
+linux-cachyos-bore-zfs

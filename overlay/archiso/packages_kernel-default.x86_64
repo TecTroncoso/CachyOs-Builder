@@ -1,0 +1,7 @@
+#
+# Kernel CachyOS por defecto (linux-cachyos, EEVDF) + variantes.
+# Es el mismo que trae la ISO oficial de CachyOS.
+#
+linux-cachyos
+linux-cachyos-nvidia-open
+linux-cachyos-zfs

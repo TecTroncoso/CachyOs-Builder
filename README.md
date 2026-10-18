@@ -40,11 +40,11 @@ Formato: **`<escritorio>-<kernel>-<apps>`**
 | Dimensión | Opciones | Descripción |
 |-----------|----------|-------------|
 | Escritorio | `kde`, `gnome`, `xfce` | KDE Plasma (default CachyOS), GNOME o Xfce |
-| Kernel | `bore`, `lts` | `linux-cachyos` (BORE) o `linux-cachyos-lts` (+ nvidia-open y zfs) |
+| Kernel | `default`, `bore`, `lts` | `linux-cachyos` (EEVDF, ISO oficial), `linux-cachyos-bore` (BORE real) o `linux-cachyos-lts` — todos con nvidia-open y zfs |
 | Apps | `complete`, `minimal` | `complete` = rescue/extra de CachyOS; `minimal` = solo base |
 
-Ejemplos: `kde-bore-complete`, `gnome-lts-minimal`, `xfce-bore-complete`.
-Perfiles disponibles: 3 escritorios × 2 kernels × 2 apps = **12**.
+Ejemplos: `kde-default-complete`, `gnome-lts-minimal`, `xfce-bore-complete`.
+Perfiles disponibles: 3 escritorios × 3 kernels × 2 apps = **18**.
 
 ---
 
@@ -59,7 +59,8 @@ CachyOSMod/
 │   ├── packages_desktop-kde.x86_64    # KDE Plasma + plasmalogin
 │   ├── packages_desktop-gnome.x86_64  # GNOME + gdm
 │   ├── packages_desktop-xfce.x86_64   # Xfce + lightdm
-│   ├── packages_kernel-bore.x86_64    # linux-cachyos (+nvidia-open, zfs)
+│   ├── packages_kernel-default.x86_64 # linux-cachyos (EEVDF, ISO oficial)
+│   ├── packages_kernel-bore.x86_64    # linux-cachyos-bore (BORE real)
 │   ├── packages_kernel-lts.x86_64     # linux-cachyos-lts (+nvidia-open, zfs)
 │   ├── packages_apps-complete.x86_64  # Apps extra/rescue
 │   ├── packages_apps-minimal.x86_64   # (minimal)
@@ -91,9 +92,9 @@ sudo pacman-key --lsign-key F3B607488DB35A47
 sudo pacman -Syu --needed cachyos-keyring
 
 # 2. Construir un perfil concreto
-./scripts/build.sh kde-bore-complete
+./scripts/build.sh kde-default-complete
 
-# La ISO queda en:  .work/base/out/kde-bore-complete/
+# La ISO queda en:  .work/base/out/kde-default-complete/
 ```
 
 > `build.sh` clona la base de CachyOS en `.work/base/` (fijada a `BASE_REF`),
@@ -114,8 +115,8 @@ BASE_REF=<otro-commit> ./scripts/build.sh gnome-lts-complete
 Workflow: `.github/workflows/build-iso.yml`.
 
 - **Manual (`workflow_dispatch`)**: elige `desktop`, `kernel` y `apps` en la UI,
-  o marca **`build_all`** para construir los 12 perfiles en matriz.
-- **Push a `main`/`master`**: construye el perfil por defecto `kde-bore-complete`.
+  o marca **`build_all`** para construir los 18 perfiles en matriz.
+- **Push a `main`/`master`**: construye el perfil por defecto `kde-default-complete`.
 
 Cada perfil genera un artifact `cachyosmod-<perfil>-<fecha>` con la ISO y su
 `.sha256`.

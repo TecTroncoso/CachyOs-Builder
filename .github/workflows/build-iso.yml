@@ -11,15 +11,15 @@ on:
       kernel:
         description: "Kernel"
         type: choice
-        options: [bore, lts]
-        default: bore
+        options: [default, bore, lts]
+        default: default
       apps:
         description: "Aplicaciones"
         type: choice
         options: [complete, minimal]
         default: complete
       build_all:
-        description: "Construir TODOS los perfiles (matriz 3x2x2)"
+        description: "Construir TODOS los perfiles (matriz 3x3x2)"
         type: boolean
         default: false
   push:
@@ -46,11 +46,11 @@ jobs:
         env:
           BUILD_ALL: ${{ github.event.inputs.build_all == 'true' }}
           DESKTOP: ${{ github.event.inputs.desktop || 'kde' }}
-          KERNEL: ${{ github.event.inputs.kernel || 'bore' }}
+          KERNEL: ${{ github.event.inputs.kernel || 'default' }}
           APPS: ${{ github.event.inputs.apps || 'complete' }}
         run: |
           if [ "$BUILD_ALL" = "true" ]; then
-            profiles='["kde-bore-complete","kde-bore-minimal","kde-lts-complete","kde-lts-minimal","gnome-bore-complete","gnome-bore-minimal","gnome-lts-complete","gnome-lts-minimal","xfce-bore-complete","xfce-bore-minimal","xfce-lts-complete","xfce-lts-minimal"]'
+            profiles='["kde-default-complete","kde-default-minimal","kde-bore-complete","kde-bore-minimal","kde-lts-complete","kde-lts-minimal","gnome-default-complete","gnome-default-minimal","gnome-bore-complete","gnome-bore-minimal","gnome-lts-complete","gnome-lts-minimal","xfce-default-complete","xfce-default-minimal","xfce-bore-complete","xfce-bore-minimal","xfce-lts-complete","xfce-lts-minimal"]'
           else
             profiles="[\"${DESKTOP}-${KERNEL}-${APPS}\"]"
           fi

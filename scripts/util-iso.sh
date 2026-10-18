@@ -166,7 +166,7 @@ prepare_profile(){
     IFS='-' read -r _desktop _kernel _apps <<< "${profile}"
 
     case "${_desktop}" in kde|gnome|xfce) ;; *) die "Unknown desktop: [%s] (use kde|gnome|xfce)" "${_desktop}";; esac
-    case "${_kernel}"  in bore|lts)       ;; *) die "Unknown kernel: [%s] (use bore|lts)" "${_kernel}";; esac
+    case "${_kernel}"  in default|bore|lts)       ;; *) die "Unknown kernel: [%s] (use default|bore|lts)" "${_kernel}";; esac
     case "${_apps}"    in complete|minimal) ;; *) die "Unknown apps: [%s] (use complete|minimal)" "${_apps}";; esac
 
     local _iso_version="$(date +%y%m%d)"

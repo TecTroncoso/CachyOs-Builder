@@ -9,8 +9,8 @@
 #   4. Ejecuta buildiso.sh -p <perfil>.
 #
 # Uso:
-#   ./build.sh [perfil]            # ej: ./build.sh kde-bore-complete
-#   Perfil por defecto: kde-bore-complete
+#   ./build.sh [perfil]            # ej: ./build.sh kde-default-complete
+#   Perfil por defecto: kde-default-complete
 #
 # Variables opcionales:
 #   BASE_REPO  (default: https://github.com/CachyOS/CachyOS-Live-ISO.git)
@@ -20,7 +20,7 @@ set -euo pipefail
 
 BASE_REPO="${BASE_REPO:-https://github.com/CachyOS/CachyOS-Live-ISO.git}"
 BASE_REF="${BASE_REF:-3215497d2e8c5fea90e185affcf973dfa2cf790b}"
-PROFILE="${1:-kde-bore-complete}"
+PROFILE="${1:-kde-default-complete}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
@@ -33,8 +33,8 @@ echo "    Base ref  : ${BASE_REF}"
 echo "    Perfil    : ${PROFILE}"
 
 # Validar formato de perfil (escritorio-kernel-apps)
-if [[ ! "${PROFILE}" =~ ^(kde|gnome|xfce)-(bore|lts)-(complete|minimal)$ ]]; then
-    echo "ERROR: perfil invalido '${PROFILE}'. Formato: <kde|gnome|xfce>-<bore|lts>-<complete|minimal>" >&2
+if [[ ! "${PROFILE}" =~ ^(kde|gnome|xfce)-(default|bore|lts)-(complete|minimal)$ ]]; then
+    echo "ERROR: perfil invalido '${PROFILE}'. Formato: <kde|gnome|xfce>-<default|bore|lts>-<complete|minimal>" >&2
     exit 1
 fi
 
