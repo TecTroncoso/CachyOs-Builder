@@ -76,6 +76,52 @@ Perfiles disponibles: 3 escritorios × 3 kernels × 2 apps = **18**.
 
 ---
 
+## Migrar el sistema instalado a v4
+
+Gracias al mecanismo de runtime, una ISO horneada en `v3` (la opción
+recomendada para CI) acaba siendo un **sistema v4 completo** en cualquier
+máquina con AVX-512:
+
+```
+CI:      arch=v3  (fiable en cualquier runner, sin lotería de hardware)
+  →      instalar con Calamares (hereda el pacman.conf con cascada v4→v3)
+  →      primer arranque: migrar a v4 con 3 comandos (o dejar que los updates lo hagan)
+```
+
+**Comprobación en la sesión live (antes de instalar):** con la ISO arrancada
+en la máquina destino, verificar que la cascada elige el nivel correcto:
+
+```bash
+sudo pacman -Sy
+pacman -Si glibc | grep -iE "repositorio|repository"
+# En una CPU con AVX-512 debe mostrar: Repositorio : cachyos-v4
+```
+
+**Migración inmediata tras instalar** (procedimiento de la wiki de CachyOS
+para migrar entre niveles):
+
+```bash
+sudo pacman -Scc                         # limpiar cache (no reutilizar paquetes v3)
+sudo pacman -Sy
+pacman -Qqn | sudo pacman -S --needed -  # reinstalar TODO desde [cachyos-v4]
+sudo reboot
+
+pacman -Qi glibc | grep -i arquitectura   # verificar: Arquitectura : x86_64_v4
+```
+
+> Si el `--needed` se saltara algún paquete por tener la misma versión, el
+> fallback garantizado es reinstalar **sin** `--needed`
+> (`pacman -Qqn | sudo pacman -S -`): pacman reinstala explícitamente todo
+> target ya instalado y, con `[cachyos-v4]` primero en el pacman.conf, el
+> candidato sale siempre del repo v4.
+
+**Migración natural (sin hacer nada):** cada paquete que recibe una
+actualización de versión sale de `[cachyos-v4]` (primer repo de la cascada),
+así que con el `pacman -Syu` habitual el sistema se convierte a v4 solo,
+paquete a paquete, en pocos días.
+
+---
+
 ## Estructura del repo
 
 ```
