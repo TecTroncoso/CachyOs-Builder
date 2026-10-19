@@ -19,7 +19,7 @@ on:
         options: [complete, minimal]
         default: complete
       arch:
-        description: "Optimizacion CPU (v3=AVX2, v4=AVX-512, v3v4=ambos en cascada)"
+        description: "Optimizacion horneada (v3=AVX2 fiable en CI; v4/v3v4=AVX-512, loteria de runner)"
         type: choice
         options: [generic, v3, v4, v3v4]
         default: generic
@@ -98,11 +98,16 @@ jobs:
         env:
           ARCH_TUNE: ${{ github.event.inputs.arch || 'generic' }}
         run: |
+          RUNNER_CPU="$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ *//')"
+          echo "CPU del runner: ${RUNNER_CPU}"
           if [ "$ARCH_TUNE" = "v3" ] || [ "$ARCH_TUNE" = "v3v4" ]; then
-            grep -qw avx2 /proc/cpuinfo || { echo "::error::ARCH_TUNE=$ARCH_TUNE necesita una CPU con AVX2 y este runner no la tiene."; exit 1; }
+            grep -qw avx2 /proc/cpuinfo || { echo "::error::ARCH_TUNE=$ARCH_TUNE necesita una CPU con AVX2 y este runner ($RUNNER_CPU) no la tiene."; exit 1; }
           fi
           if [ "$ARCH_TUNE" = "v4" ] || [ "$ARCH_TUNE" = "v3v4" ]; then
-            grep -qw avx512f /proc/cpuinfo || { echo "::error::ARCH_TUNE=$ARCH_TUNE necesita una CPU con AVX-512 y este runner no la tiene (los binarios v4 se ejecutan en chroot durante el build). Usa arch=generic|v3 o re-ejecuta el job (el hardware del runner puede variar)."; exit 1; }
+            grep -qw avx512f /proc/cpuinfo || {
+              echo "::error::Este runner ($RUNNER_CPU) no tiene AVX-512 y los binarios v4 se ejecutan en chroot durante el build. La mayoria de runners estandar son AMD EPYC sin AVX-512 (loteria). Usa arch=generic|v3 — el sistema instalado igual llega a v4 tras el primer pacman -Syu gracias a la seleccion en runtime — o re-ejecuta el job hasta tocar un runner Intel con AVX-512."
+              exit 1
+            }
           fi
 
       - name: Build ISO (${{ matrix.profile }})

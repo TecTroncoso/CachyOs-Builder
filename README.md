@@ -65,8 +65,8 @@ Perfiles disponibles: 3 escritorios × 3 kernels × 2 apps = **18**.
 > (Intel Skylake-X/Xeon / AMD Zen 4+). En CPUs más viejas el sistema crashea
 > (instrucción ilegal). `generic` arranca en cualquier x86-64.
 >
-> ℹ️ **Selección en runtime (estilo CachyOS oficial):** en builds `v3`/`v4`/
-> `v3v4`, el `pacman.conf` del sistema live — que el sistema instalado
+> ℹ️ **Selección en runtime (estilo CachyOS oficial):** en **todos** los
+> builds, el `pacman.conf` del sistema live — que el sistema instalado
 > hereda — usa el mismo mecanismo que un CachyOS oficial instalado:
 > `Architecture = auto` + secciones `[cachyos-v4]`/`[cachyos-v3]` con
 > `Include = /etc/pacman.d/cachyos-vN-mirrorlist`. El pacman parcheado de
@@ -172,8 +172,13 @@ Workflow: `.github/workflows/build-iso.yml`.
 - **Push a `main`/`master`**: construye el perfil por defecto
   `kde-default-complete` (arch `generic`).
 - **`arch=v4|v3v4` en CI**: el runner necesita **AVX-512** (el build ejecuta
-  los binarios v4 en chroot durante la instalacion); el workflow lo verifica
-  al empezar y falla con un mensaje claro si la CPU no lo soporta.
+  los binarios v4 en chroot). La mayoría de runners estándar son AMD EPYC
+  **sin** AVX-512, así que es una lotería; el workflow lo verifica al
+  empezar y falla en segundos mostrando el modelo de CPU del runner.
+  Recomendado: usa `arch=generic|v3` (fiable en cualquier runner) — el
+  sistema instalado llega igual a v4 tras el primer `pacman -Syu`
+  gracias a la selección en runtime — o re-ejecuta el job hasta tocar un
+  runner Intel con AVX-512.
 
 Cada perfil genera un artifact `cachyosmod-<perfil>[-<arch>]-<fecha>` con la ISO y
 su `.sha256` (el sufijo `-<arch>` solo aparece si `arch` no es `generic`;

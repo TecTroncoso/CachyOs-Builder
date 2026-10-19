@@ -240,14 +240,10 @@ apply_live_arch_tune() {
 apply_arch_tune() {
     local _tune="${ARCH_TUNE:-generic}"
 
-    if [[ "${_tune}" == "generic" ]]; then
-        msg2 "Arch tune: generic (build y live quedan como la base, sin repos v3/v4)"
-        return 0
-    fi
-
-    # Niveles a habilitar, en orden de prioridad (el primero queda mas arriba).
+    # Niveles para el conf de BUILD (lo que se HORNEA en la ISO):
     local _levels=()
     case "${_tune}" in
+        generic) ;;
         v3)   _levels=(v3) ;;
         v4)   _levels=(v4) ;;
         v3v4) _levels=(v4 v3) ;;
@@ -267,7 +263,9 @@ apply_arch_tune() {
     local _lv _block
 
     # --- Conf de BUILD: multi-arch forzado + Server lines literales --------
-    if [[ ! -f "${_conf_build}" ]]; then
+    if [[ ${#_levels[@]} -eq 0 ]]; then
+        msg2 "Arch tune: generic (conf de build sin repos v3/v4; se hornean paquetes x86_64 universales)"
+    elif [[ ! -f "${_conf_build}" ]]; then
         warning "Arch tune: no existe [%s], se omite el conf de build" "${_conf_build}"
     else
         # 1) Bloques de repos del nivel, justo antes de la seccion [cachyos].
@@ -325,9 +323,15 @@ apply_arch_tune() {
         fi
     fi
 
-    # --- Conf LIVE: mecanismo oficial (seleccion en runtime segun la CPU) --
+    # --- Conf LIVE: SIEMPRE cascada completa v4 -> v3 (estilo oficial) ------
+    # Da igual el nivel horneado: el pacman parcheado de CachyOS descarta en
+    # runtime lo que la CPU no soporte, asi que llevar la cascada completa es
+    # seguro en cualquier maquina y hace que el sistema instalado llegue a su
+    # nivel optimo (v4 en maquinas AVX-512) tras el primer 'pacman -Syu'.
+    # Asi no hace falta hornear v4 (loteria de hardware en CI) para acabar
+    # con un sistema v4 en casa.
     if [[ -f "${_conf_live}" ]]; then
-        apply_live_arch_tune "${_conf_live}" "${_levels[@]}"
+        apply_live_arch_tune "${_conf_live}" v4 v3
     else
         warning "Arch tune: no existe [%s], se omite el conf live" "${_conf_live}"
     fi
@@ -343,7 +347,7 @@ apply_arch_tune() {
         sed -i '/^Server = /s|\$arch|x86_64|g' "${src_dir}/archiso/airootfs/etc/pacman.d/cachyos-mirrorlist"
     fi
 
-    msg2 "Arch tune: %s -> niveles %s (repos cachyos, cachyos-core y cachyos-extra de cada nivel)" "${_tune}" "${_levels[*]}"
+    msg2 "Arch tune: build=%s (niveles horneados: %s) + live con cascada v4->v3 en runtime" "${_tune}" "${_levels[*]:-ninguno}"
 }
 
 # Desactiva el timer archlinux-keyring-wkd-sync dentro del airootfs.
