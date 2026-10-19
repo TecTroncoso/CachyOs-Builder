@@ -146,42 +146,106 @@ set_display_manager() {
     msg2 "Display-manager -> %s" "${_dm}"
 }
 
-# Habilita los repos optimizados de CachyOS (x86-64-v3 / v4) en pacman.conf.
-# ARCH_TUNE=generic -> no hace nada;
-# v3 / v4 -> inyecta las 3 secciones de ese nivel ANTES de [cachyos];
-# v3v4 -> inyecta v4 primero y luego v3 (cascada v4 -> v3 -> generico).
-# pacman prioriza el primer repo que define cada paquete.
+# Habilita los repos optimizados de CachyOS (x86-64-v3 / v4).
+# ARCH_TUNE=generic -> no toca nada (build y live quedan como la base);
+# v3 / v4 / v3v4 -> trata cada pacman.conf de forma DISTINTA, igual que
+# hace el CachyOS oficial:
 #
-# Ajusta DOS archivos (si existen):
-#   1) archiso/pacman.conf              -> el que usa mkarchiso/pacstrap para
-#      instalar los paquetes del airootfs durante el build;
-#   2) archiso/airootfs/etc/pacman.conf -> el /etc/pacman.conf del sistema live.
+#   1) archiso/pacman.conf -> conf de BUILD (lo usa pacstrap/mkarchiso en
+#      el runner para hornear los paquetes del airootfs). Aqui SI se fuerza
+#      'Architecture = x86_64_vN ... x86_64' y Server lines LITERALES:
+#        * un pacman con 'auto' rechazaria los paquetes optimizados en
+#          runners sin AVX2/AVX-512 ("package architecture is not valid");
+#        * los mirrorlists cachyos-v{3,4} usan la variable $arch_v{3,4}
+#          (parche propio del pacman de CachyOS) cuya expansion se corrompe
+#          con una lista multiple en Architecture (404 en todos los mirrors).
+#      Mirrors verificados: cdn77/us/at sirven /repo/x86_64_vN/; el repo
+#      generico vive bajo /repo/x86_64/, asi que tambien se fijan las URLs
+#      del [cachyos] de build (la base apunta a mirror.cachyos.org,
+#      marcado inestable upstream).
 #
-# Ademas de los repos, fija 'Architecture': los paquetes optimizados tienen
-# arch x86_64_v3/x86_64_v4 y pacman los RECHAZA si solo acepta 'auto' (que en
-# el runner resuelve a x86_64): "package architecture is not valid". pacman
-# admite varias arquitecturas separadas por espacios ('any' siempre pasa).
+#   2) archiso/airootfs/etc/pacman.conf -> /etc/pacman.conf del sistema
+#      LIVE (y del INSTALADO: el sistema instalado lo hereda). Aqui se
+#      replica el mecanismo OFICIAL de CachyOS para que la seleccion del
+#      nivel ocurra EN RUNTIME segun la CPU de cada maquina:
+#      ver apply_live_arch_tune().
+# Tratamiento del pacman.conf del sistema live/instalado: replica el
+# mecanismo OFICIAL de CachyOS (wiki "Optimized Repositories") para que la
+# seleccion v3/v4/generico ocurra EN RUNTIME segun la CPU de cada maquina,
+# sin volver a hornear la ISO:
 #
-# Los bloques v3/v4 NO usan Include de cachyos-v{3,4}-mirrorlist: esos
-# archivos usan la variable $arch_v{3,4} (parche propio del pacman de
-# CachyOS) cuya expansion se corrompe con una lista multiple en
-# Architecture (inyecta la lista entera en la URL -> 404 en todos los
-# mirrors). En su lugar se escriben Server lines literales con la ruta
-# del nivel; $repo es variable nativa de pacman y no depende de
-# Architecture. Mirrors verificados: cdn77/us/at sirven /repo/x86_64_vN/.
-#
-# El repo generico vive bajo /repo/x86_64/ en los mirrors (verificado),
-# por lo que tambien se fijan las URLs del [cachyos] del conf de build
-# (la base apunta a mirror.cachyos.org, marcado inestable upstream).
+#   * 'Architecture = auto': el pacman parcheado de CachyOS (viaja en la
+#     ISO como cachyos/pacman) detecta la CPU en cada arranque y expande
+#     'auto' a la lista [x86_64, x86_64_v2?, x86_64_v3?, x86_64_v4?].
+#     Los paquetes de niveles que la CPU no soporta se descartan solos y
+#     pacman cae al siguiente repo de la cascada -> v4 -> v3 -> generico.
+#   * Secciones v3/v4 con 'Include = /etc/pacman.d/cachyos-vN-mirrorlist':
+#     esos archivos los instalan los paquetes cachyos-v{3,4}-mirrorlist (ya
+#     incluidos en el listado de la ISO) y sus Server lines usan
+#     $arch_v{3,4}, variables que solo expande el pacman parcheado. Es
+#     exactamente la configuracion que lleva un CachyOS oficial instalado.
+#   * 'SigLevel = Optional TrustAll': mismo criterio que el conf live
+#     oficial aplica a [cachyos]; el keyring del live solo se pobla con la
+#     clave de Arch (pacstrap -K), no con la de CachyOS.
+apply_live_arch_tune() {
+    local _conf="$1"; shift
+    local _levels=("$@")
+    local _lv _block
+
+    # Idempotencia: eliminar el bloque inyectado previamente.
+    sed -i '/^# >>> CachyOSMod arch-tune (runtime) >>>$/,/^# <<< CachyOSMod arch-tune (runtime) <<<$/{d}' "${_conf}"
+
+    # Architecture = auto: deteccion de CPU en runtime (pacman parcheado).
+    if grep -qE '^[[:space:]]*Architecture[[:space:]]*=' "${_conf}"; then
+        sed -i -E "s|^[[:space:]]*Architecture[[:space:]]*=.*|Architecture = auto|" "${_conf}"
+    elif grep -qE '^[[:space:]]*#[[:space:]]*Architecture[[:space:]]*=' "${_conf}"; then
+        sed -i -E "s|^[[:space:]]*#[[:space:]]*Architecture[[:space:]]*=.*|Architecture = auto|" "${_conf}"
+    else
+        sed -i "/^\[options\]/a Architecture = auto" "${_conf}"
+    fi
+
+    # Secciones v3/v4 con los mirrorlists del propio sistema (estilo oficial).
+    _block="${_conf}.tune"
+    {
+        printf '# >>> CachyOSMod arch-tune (runtime) >>>\n'
+        printf '\n'
+        for _lv in "${_levels[@]}"; do
+            printf '[cachyos-%s]\n' "${_lv}"
+            printf 'SigLevel = Optional TrustAll\n'
+            printf 'Include = /etc/pacman.d/cachyos-%s-mirrorlist\n' "${_lv}"
+            printf '\n'
+            printf '[cachyos-core-%s]\n' "${_lv}"
+            printf 'SigLevel = Optional TrustAll\n'
+            printf 'Include = /etc/pacman.d/cachyos-%s-mirrorlist\n' "${_lv}"
+            printf '\n'
+            printf '[cachyos-extra-%s]\n' "${_lv}"
+            printf 'SigLevel = Optional TrustAll\n'
+            printf 'Include = /etc/pacman.d/cachyos-%s-mirrorlist\n' "${_lv}"
+            printf '\n'
+        done
+        printf '# <<< CachyOSMod arch-tune (runtime) <<<\n'
+    } > "${_block}"
+    awk 'NR==FNR{b=b $0 ORS; next} /^\[cachyos\]$/ && !done{printf "%s", b; done=1} {print}' \
+        "${_block}" "${_conf}" > "${_conf}.tmp"
+    mv "${_conf}.tmp" "${_conf}"
+    rm -f "${_block}"
+
+    if grep -q "^\[cachyos-${_levels[0]}\]$" "${_conf}"; then
+        msg2 "Arch tune [live %s]: estilo oficial (Architecture = auto + Include cachyos-v{3,4}-mirrorlist)" "${_conf}"
+    else
+        warning "No se pudo inyectar [cachyos-%s] en %s" "${_levels[0]}" "${_conf}"
+    fi
+}
+
 apply_arch_tune() {
     local _tune="${ARCH_TUNE:-generic}"
 
     if [[ "${_tune}" == "generic" ]]; then
-        msg2 "Arch tune: generic (sin repos v3/v4)"
+        msg2 "Arch tune: generic (build y live quedan como la base, sin repos v3/v4)"
         return 0
     fi
 
-    # Niveles a inyectar, en orden de prioridad (el primero queda mas arriba).
+    # Niveles a habilitar, en orden de prioridad (el primero queda mas arriba).
     local _levels=()
     case "${_tune}" in
         v3)   _levels=(v3) ;;
@@ -190,7 +254,7 @@ apply_arch_tune() {
         *)    die "Unknown arch tune: [%s] (use generic|v3|v4|v3v4)" "${_tune}" ;;
     esac
 
-    # Arquitecturas que pacman aceptara: nivel(es) optimizado(s) + generico.
+    # Arquitecturas que aceptara el pacman de BUILD: nivel(es) + generico.
     local _archs=""
     case "${_tune}" in
         v3)   _archs="x86_64_v3 x86_64" ;;
@@ -200,18 +264,16 @@ apply_arch_tune() {
 
     local _conf_build="${src_dir}/archiso/pacman.conf"
     local _conf_live="${src_dir}/archiso/airootfs/etc/pacman.conf"
-    local _conf _lv _block
+    local _lv _block
 
-    for _conf in "${_conf_build}" "${_conf_live}"; do
-        if [[ ! -f "${_conf}" ]]; then
-            warning "Arch tune: no existe [%s], se omite" "${_conf}"
-            continue
-        fi
-
+    # --- Conf de BUILD: multi-arch forzado + Server lines literales --------
+    if [[ ! -f "${_conf_build}" ]]; then
+        warning "Arch tune: no existe [%s], se omite el conf de build" "${_conf_build}"
+    else
         # 1) Bloques de repos del nivel, justo antes de la seccion [cachyos].
         #    Servers literales (verificados) en vez del Include de
         #    cachyos-v{3,4}-mirrorlist (que usa $arch_v{3,4}).
-        _block="${_conf}.tune"
+        _block="${_conf_build}.tune"
         : > "${_block}"
         for _lv in "${_levels[@]}"; do
             {
@@ -230,42 +292,45 @@ apply_arch_tune() {
             } >> "${_block}"
         done
         awk 'NR==FNR{b=b $0 ORS; next} /^\[cachyos\]$/ && !done{printf "%s", b; done=1} {print}' \
-            "${_block}" "${_conf}" > "${_conf}.tmp"
-        mv "${_conf}.tmp" "${_conf}"
+            "${_block}" "${_conf_build}" > "${_conf_build}.tmp"
+        mv "${_conf_build}.tmp" "${_conf_build}"
         rm -f "${_block}"
 
         # 2) Architecture: aceptar los paquetes del nivel optimizado + generico.
-        if grep -qE '^[[:space:]]*Architecture[[:space:]]*=' "${_conf}"; then
-            sed -i -E "s|^[[:space:]]*Architecture[[:space:]]*=.*|Architecture = ${_archs}|" "${_conf}"
-        elif grep -qE '^[[:space:]]*#[[:space:]]*Architecture[[:space:]]*=' "${_conf}"; then
-            sed -i -E "s|^[[:space:]]*#[[:space:]]*Architecture[[:space:]]*=.*|Architecture = ${_archs}|" "${_conf}"
+        if grep -qE '^[[:space:]]*Architecture[[:space:]]*=' "${_conf_build}"; then
+            sed -i -E "s|^[[:space:]]*Architecture[[:space:]]*=.*|Architecture = ${_archs}|" "${_conf_build}"
+        elif grep -qE '^[[:space:]]*#[[:space:]]*Architecture[[:space:]]*=' "${_conf_build}"; then
+            sed -i -E "s|^[[:space:]]*#[[:space:]]*Architecture[[:space:]]*=.*|Architecture = ${_archs}|" "${_conf_build}"
         else
-            sed -i "/^\[options\]/a Architecture = ${_archs}" "${_conf}"
+            sed -i "/^\[options\]/a Architecture = ${_archs}" "${_conf_build}"
         fi
 
-        # 3) Repo generico [cachyos] del conf de build: la base apunta a
-        #    mirror.cachyos.org (inestable) con $arch; lo sustituimos por
-        #    cdn77 (CDN principal) + fallbacks, todos con ruta literal.
-        if [[ "${_conf}" == "${_conf_build}" ]]; then
-            sed -i 's|^Server = https://mirror\.cachyos\.org/repo/\$arch/\$repo$|Server = https://cdn77.cachyos.org/repo/x86_64/$repo\nServer = https://us.cachyos.org/repo/x86_64/$repo\nServer = https://mirror.cachyos.org/repo/x86_64/$repo|' "${_conf}"
-        fi
+        # 3) Repo generico [cachyos]: la base apunta a mirror.cachyos.org
+        #    (inestable) con $arch; lo sustituimos por cdn77 (CDN principal)
+        #    + fallbacks, todos con ruta literal.
+        sed -i 's|^Server = https://mirror\.cachyos\.org/repo/\$arch/\$repo$|Server = https://cdn77.cachyos.org/repo/x86_64/$repo\nServer = https://us.cachyos.org/repo/x86_64/$repo\nServer = https://mirror.cachyos.org/repo/x86_64/$repo|' "${_conf_build}"
         # Por si quedara alguna otra Server line con $arch: fijarla a x86_64
         # (el repo generico vive bajo /repo/x86_64/ en los mirrors).
-        sed -i '/^Server = /s|\$arch|x86_64|g' "${_conf}"
+        sed -i '/^Server = /s|\$arch|x86_64|g' "${_conf_build}"
 
-        # 4) Solo en el conf de BUILD: [core]/[extra]/[multilib] resuelven el
-        #    Include contra el mirrorlist del CONTENEDOR (que usa $arch); se
-        #    sustituye por un server literal determinista.
-        if [[ "${_conf}" == "${_conf_build}" ]]; then
-            sed -i 's|^Include = /etc/pacman\.d/mirrorlist$|Server = https://geo.mirror.pkgbuild.com/$repo/os/x86_64|' "${_conf}"
-        fi
+        # 4) [core]/[extra]/[multilib] resuelven el Include contra el
+        #    mirrorlist del CONTENEDOR (que usa $arch); se sustituye por un
+        #    server literal determinista.
+        sed -i 's|^Include = /etc/pacman\.d/mirrorlist$|Server = https://geo.mirror.pkgbuild.com/$repo/os/x86_64|' "${_conf_build}"
 
-        if grep -q "^\[cachyos-${_levels[0]}\]$" "${_conf}"; then
-            msg2 "Arch tune [%s]: repos inyectados, Architecture = %s" "${_conf}" "${_archs}"
+        if grep -q "^\[cachyos-${_levels[0]}\]$" "${_conf_build}"; then
+            msg2 "Arch tune [build %s]: repos inyectados, Architecture = %s" "${_conf_build}" "${_archs}"
         else
-            warning "No se pudo inyectar [cachyos-${_levels[0]}] en %s" "${_conf}"
+            warning "No se pudo inyectar [cachyos-%s] en %s" "${_levels[0]}" "${_conf_build}"
         fi
-    done
+    fi
+
+    # --- Conf LIVE: mecanismo oficial (seleccion en runtime segun la CPU) --
+    if [[ -f "${_conf_live}" ]]; then
+        apply_live_arch_tune "${_conf_live}" "${_levels[@]}"
+    else
+        warning "Arch tune: no existe [%s], se omite el conf live" "${_conf_live}"
+    fi
 
     # 5) El mirrorlist de Arch incluido en la ISO (lo usa el live para
     #    [core]/[extra]/[multilib]) tambien usa $arch: fijarlo.

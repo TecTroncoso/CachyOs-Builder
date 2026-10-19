@@ -32,8 +32,12 @@ La base es un **perfil archiso** estándar: `archiso/profiledef.sh`,
   por perfil, sino que se concatenan: base + escritorio + kernel + apps).
 - Selección de display-manager según el escritorio (KDE→plasmalogin,
   GNOME→gdm, Xfce→lightdm).
-- Optimización CPU opcional (`ARCH_TUNE`): inyecta los repos oficiales
-  v3/v4/v3v4 en el `pacman.conf` de build, sin tocar ningún fragment.
+- Optimización CPU opcional (`ARCH_TUNE`): hornea los paquetes del nivel
+  elegido (repos oficiales v3/v4/v3v4 en el conf de build) y configura el
+  `pacman.conf` del sistema live/instalado con el **mecanismo oficial de
+  CachyOS** (`Architecture = auto` + mirrorlists v3/v4): el pacman
+  parcheado de CachyOS detecta la CPU en cada arranque y pacman sirve
+  v4 → v3 → genérico según la máquina. Sin tocar ningún fragment.
 - Rebranding (`iso_name=cachyosmod`, motd, etiquetas).
 
 ---
@@ -56,10 +60,19 @@ Formato: **`<escritorio>-<kernel>-<apps>`**
 Ejemplos: `kde-default-complete`, `gnome-lts-minimal`, `xfce-bore-complete`.
 Perfiles disponibles: 3 escritorios × 3 kernels × 2 apps = **18**.
 
-> ⚠️ **Requisito de CPU:** una ISO `v3` solo arranca en CPUs con AVX2
-> (Intel Haswell 2013+ / AMD Zen+); `v4` requiere AVX-512
+> ⚠️ **Requisito de CPU (paquetes horneados):** una ISO `v3` solo arranca en
+> CPUs con AVX2 (Intel Haswell 2013+ / AMD Zen+); `v4` requiere AVX-512
 > (Intel Skylake-X/Xeon / AMD Zen 4+). En CPUs más viejas el sistema crashea
 > (instrucción ilegal). `generic` arranca en cualquier x86-64.
+>
+> ℹ️ **Selección en runtime (estilo CachyOS oficial):** en builds `v3`/`v4`/
+> `v3v4`, el `pacman.conf` del sistema live — que el sistema instalado
+> hereda — usa el mismo mecanismo que un CachyOS oficial instalado:
+> `Architecture = auto` + secciones `[cachyos-v4]`/`[cachyos-v3]` con
+> `Include = /etc/pacman.d/cachyos-vN-mirrorlist`. El pacman parcheado de
+> CachyOS (incluido en la ISO como `cachyos/pacman`) detecta la CPU en cada
+> arranque y descarta solo los niveles no soportados, así `pacman -Syu`
+> mantiene el sistema en el mejor nivel posible para esa máquina.
 
 ---
 
@@ -139,7 +152,9 @@ ARCH_TUNE=v3v4 ./scripts/build.sh xfce-bore-minimal
 Variables opcionales:
 - `BASE_REF`: commit de CachyOS-Live-ISO a usar.
 - `BASE_REPO`: fork alternativo del repo base.
-- `ARCH_TUNE`: `generic` (default) | `v3` | `v4` | `v3v4`.
+- `ARCH_TUNE`: `generic` (default) | `v3` | `v4` | `v3v4`. Controla qué nivel
+  se **hornea** en la ISO y qué secciones v3/v4 lleva el `pacman.conf` del
+  live para la selección en runtime (estilo oficial).
 
 ```bash
 BASE_REF=<otro-commit> ./scripts/build.sh gnome-lts-complete
