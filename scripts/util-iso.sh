@@ -350,6 +350,42 @@ apply_arch_tune() {
     msg2 "Arch tune: build=%s (niveles horneados: %s) + live con cascada v4->v3 en runtime" "${_tune}" "${_levels[*]:-ninguno}"
 }
 
+# Recorte de idiomas: mantiene solo espanol e ingles.
+#
+# Cada paquete de Arch/CachyOS arrastra sus traducciones de ~30 idiomas
+# (/usr/share/locale/*/*.mo, traducciones Qt, ...); en ~790 paquetes eso
+# suma ~100-150 MiB instalados. NoExtract evita extraerlos.
+# Sintaxis de NoExtract: globs; el ULTIMO patron que coincide gana y '!'
+# niega, por eso las excepciones van despues del patron general.
+# locale.alias se conserva (varias apps lo leen al arrancar).
+#
+# Se aplica a los DOS pacman.conf:
+#   * build  -> pacstrap no extrae los locale al hornear la ISO (~40-70 MiB
+#     menos de squashfs; la ISO queda holgadamente por debajo de los 2 GiB
+#     por archivo que exige GitHub Releases);
+#   * live   -> el sistema instalado lo hereda, asi los updates tampoco
+#     re-introducen idiomas y el sistema se mantiene esbelto. Si algun dia
+#     hiciera falta otro idioma: quitar la linea en /etc/pacman.conf y
+#     reinstalar el paquete correspondiente.
+apply_locale_slim() {
+    local _conf _pat
+    local -a _slim=(
+        'NoExtract = usr/share/locale/* !usr/share/locale/locale.alias !usr/share/locale/en* !usr/share/locale/es*'
+        'NoExtract = usr/share/qt6/translations/* !usr/share/qt6/translations/*_en* !usr/share/qt6/translations/*_es*'
+    )
+
+    for _conf in "${src_dir}/archiso/pacman.conf" "${src_dir}/archiso/airootfs/etc/pacman.conf"; do
+        [[ -f "${_conf}" ]] || continue
+        for _pat in "${_slim[@]}"; do
+            if ! grep -qxF "${_pat}" "${_conf}"; then
+                sed -i "/^\[options\]/a ${_pat}" "${_conf}"
+            fi
+        done
+        msg2 "Locale slim [%s]: solo en/es (NoExtract de /usr/share/locale y traducciones Qt)" "${_conf}"
+    done
+}
+
+
 # Desactiva el timer archlinux-keyring-wkd-sync dentro del airootfs.
 #
 # FIX (v3/v4 build 2026-10-18): el parche original de CachyOS inyectaba
@@ -401,6 +437,9 @@ prepare_profile(){
 
     # Habilitar repos optimizados v3/v4/v3v4 si se pidio
     apply_arch_tune
+
+    # Recorte de idiomas: solo espanol e ingles
+    apply_locale_slim
 
     generate_environment "${profile}"
     generate_version_tag "${profile}" "${_iso_version}"

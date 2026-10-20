@@ -160,6 +160,16 @@ Incluye además:
 - `paru` + grupo `base-devel` → **soporte AUR** desde la live
   (`paru -S spotify`, etc.)
 - `firefox`, `multilib` habilitado (Steam/Wine 32 bits)
+- **Solo español e inglés:** `NoExtract` de `/usr/share/locale/*` (salvo
+  `en*`, `es*` y `locale.alias`) y de las traducciones Qt, aplicado a los
+  DOS `pacman.conf` — pacstrap no extrae los demás idiomas al hornear y el
+  sistema instalado hereda la regla (los updates tampoco los reintroducen).
+  Si un día hiciera falta otro idioma: quitar la línea `NoExtract` en
+  `/etc/pacman.conf` y reinstalar el paquete. Retiradas además
+  `noto-fonts-cjk` y `opendesktop-fonts` (fuentes CJK). Ahorra ~100-150 MiB
+  instalados y deja la ISO bajo el límite de 2 GiB de GitHub Releases.
+  Firefox va en inglés; para su UI en español: `paru -S firefox-i18n-es` (o
+  añadirlo a `packages_base.x86_64`).
 
 **Nunca quitar de la base:** `mkinitcpio-archiso` (mkarchiso lo necesita en el
 chroot para el initramfs live; el build falla sin él).
